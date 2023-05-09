@@ -35,63 +35,58 @@ resource "aws_codebuild_project" "my_project" {
 }
 
 resource "aws_codepipeline" "my_pipeline1" {
-  name     = "my-pipeline"
-  role_arn = "arn:aws:iam::124288123671:role/awsrolecodebuld"
-  
-  artifact_store {
-    location = aws_s3_bucket.artifacts_bucket.bucket
-    type     = "S3"
-  }
-  
+  name = "my-pipeline"
+
+  # Define the source stage
   stage {
     name = "Source"
-    
     action {
-      name            = "SourceAction"
-      category        = "Source"
-      owner           = "AWS"
-      provider        = "S3"
-      version         = "1"
+      # Define the configuration for the CodeCommit action
+      name             = "SourceAction"
+      category         = "Source"
+      owner            = "AWS"
+      provider         = "CodeCommit"
+      version          = "1"
       output_artifacts = ["SourceArtifact"]
-      
-      configuration = {
-        BucketName = aws_s3_bucket.source_bucket.bucket
-        ObjectKey  = "source.zip"
+      configuration {
+        RepositoryName = "my-repo"
+        BranchName     = "main"
       }
     }
   }
-  
+
+  # Define the build stage
   stage {
     name = "Build"
-    
     action {
-      name            = "BuildAction"
-      category        = "Build"
-      owner           = "AWS"
-      provider        = "CodeBuild"
-      version         = "1"
-      input_artifacts = ["SourceArtifact"]
+      # Define the configuration for the CodeBuild action
+      name             = "BuildAction"
+      category         = "Build"
+      owner            = "AWS"
+      provider         = "CodeBuild"
+      version          = "1"
+      input_artifacts  = ["SourceArtifact"]
       output_artifacts = ["BuildArtifact"]
-      
-      configuration = {
-        ProjectName = aws_codebuild_project.my_project.name
+      configuration {
+        ProjectName = "my-build-project"
       }
     }
   }
-  
+
+  # Define the deploy stage
   stage {
     name = "Deploy"
-    
     action {
-      name            = "DeployAction"
-      category        = "Deploy"
-      owner           = "AWS"
-      provider        = "S3"
-      version         = "1"
-      input_artifacts = ["BuildArtifact"]
-      
-      configuration = {
-        BucketName = aws_s3_bucket.deploy_bucket.bucket
+      # Define the configuration for the Elastic Beanstalk action
+      name             = "DeployAction"
+      category         = "Deploy"
+      owner            = "AWS"
+      provider         = "ElasticBeanstalk"
+      version          = "1"
+      input_artifacts  = ["BuildArtifact"]
+      configuration {
+        ApplicationName = "my-app"
+        EnvironmentName = "my-env"
       }
     }
   }
