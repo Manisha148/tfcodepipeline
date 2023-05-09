@@ -1,77 +1,79 @@
-provider "aws" {
-  region = "us-east-1"
-}
-
+# Create an S3 bucket for storing source code
 resource "aws_s3_bucket" "source_bucket" {
   bucket = "my-source-bucket"
 }
 
+# Create an IAM role for CodeBuild
+resource "aws_iam_role" "codebuild_role" {
+  name = "my-codebuild-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "codebuild.amazonaws.com"
+        }
+      }
+    ]
+  })
+}
+
+# Create an IAM policy for CodeBuild
+resource "aws_iam_policy" "codebuild_policy" {
+  name = "my-codebuild-policy"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:GetObject",
+          "s3:GetObjectVersion",
+          "s3:PutObject"
+        ]
+        Resource = "${aws_s3_bucket.source_bucket.arn}/*"
+      }
+    ]
+  })
+}
+
+# Attach the IAM policy to the CodeBuild role
+resource "aws_iam_role_policy_attachment" "codebuild_policy_attachment" {
+  policy_arn = aws_iam_policy.codebuild_policy.arn
+  role       = aws_iam_role.codebuild_role.name
+}
+
+# Create a CodeBuild project
 resource "aws_codebuild_project" "my_project" {
-  name       = "my-project"
-  source     = "${aws_s3_bucket.source_bucket.arn}"
-  buildspec  = "${file("${path.module}/buildspec.yml")}"
+  name = "my-codebuild-project"
+
+  service_role = aws_iam_role.codebuild_role.arn
+
+  artifacts {
+    name = "output"
+    type = "CODEPIPELINE"
+  }
+
   environment {
     compute_type = "BUILD_GENERAL1_SMALL"
+    type        = "LINUX_CONTAINER"
+    image       = "aws/codebuild/standard:5.0"
+  }
+
+  source {
+    type            = "S3"
+    location        = "S3::${aws_s3_bucket.source_bucket.arn}"
+    buildspec       = file("${path.module}/buildspec.yml")
+    report_build_status = true
+    insecure_ssl    = true
   }
 }
 
+# Create a CodePipeline pipeline
 resource "aws_codepipeline" "my_pipeline" {
-  name     = "my-pipeline"
-  role_arn = "arn:aws:iam::1234567890:role/codepipeline-role"
-
-  artifact_store {
-    location = "my-artifact-store"
-    type     = "S3"
-  }
-
-  stages {
-    name = "Source"
-
-    action {
-      name             = "Source"
-      category         = "Source"
-      owner            = "AWS"
-      provider         = "S3"
-      version          = "1"
-      output_artifacts = ["my_app"]
-      configuration {
-        Bucket = "${aws_s3_bucket.source_bucket.id}"
-        Key    = "my-app.zip"
-      }
-    }
-  }
-
-  stages {
-    name = "Build"
-
-    action {
-      name             = "Build"
-      category         = "Build"
-      owner            = "AWS"
-      provider         = "CodeBuild"
-      version          = "1"
-      input_artifacts  = ["my_app"]
-      output_artifacts = ["my_build"]
-      configuration {
-        ProjectName = "${aws_codebuild_project.my_project.name}"
-      }
-    }
-  }
-
-  stages {
-    name = "Deploy"
-
-    action {
-      name             = "Deploy"
-      category         = "Deploy"
-      owner            = "AWS"
-      provider         = "ElasticBeanstalk"
-      version          = "1"
-      input_artifacts  = ["my_build"]
-      configuration {
-        ApplicationName = "my-app"
-        EnvironmentName = "my-env"
-      }
-    }
-  }
-}
+  name = "my-codepipeline"
+  role_arn
