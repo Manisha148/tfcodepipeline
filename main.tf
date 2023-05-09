@@ -8,57 +8,65 @@ resource "aws_s3_bucket" "source_bucket" {
 
 resource "aws_codebuild_project" "my_project" {
   name = "my-project"
-  service_role = "arn:aws:iam::124288123671:role/awsrolecodebuld"
+  
+  service_role = aws_iam_role.codebuild.arn
+  
   artifacts {
-    type = "S3"
-    location = aws_s3_bucket.source_bucket.bucket
+    type = "CODEPIPELINE"
   }
+  
   source {
     type = "S3"
     location = aws_s3_bucket.source_bucket.bucket
   }
+  
   environment {
     type = "LINUX_CONTAINER"
-    compute_type = "BUILD_GENERAL1_SMALL"
-    image = "aws/codebuild/standard:4.0"
-  }
-}
-
-resource "aws_codepipeline" "my_pipeline2" {
-  name = "my-pipeline2"
-  role_arn = "arn:aws:iam::124288123671:role/awsrolecodebuld"
-  artifact_store {
-    location = aws_s3_bucket.artifact_bucket.bucket
-    type = "S3"
+    image = "aws/codebuild/standard:5.0"
   }
   
+  buildspec = file("${path.module}/buildspec.yml")
+}
+
+
+resource "aws_codepipeline" "my_pipeline" {
+  name     = "my-pipeline"
+  role_arn = aws_iam_role.pipeline.arn
+
+  artifact_store {
+    location = aws_s3_bucket.artifact_bucket.bucket
+    type     = "S3"
+  }
+
   stage {
     name = "Source"
+
     action {
-      name = "SourceAction"
-      category = "Source"
-      owner = "AWS"
-      provider = "S3"
-      version = "1"
+      name            = "SourceAction"
+      category        = "Source"
+      owner           = "AWS"
+      provider        = "S3"
+      version         = "1"
       output_artifacts = ["SourceArtifact"]
+
       configuration = {
-        S3Bucket = aws_s3_bucket.source_bucket.bucket
-        S3ObjectKey = "source.zip"
+        BucketName = aws_s3_bucket.source_bucket.bucket
       }
     }
   }
 
-  
   stage {
     name = "Build"
+
     action {
-      name = "BuildAction"
-      category = "Build"
-      owner = "AWS"
-      provider = "CodeBuild"
-      version = "1"
+      name            = "BuildAction"
+      category        = "Build"
+      owner           = "AWS"
+      provider        = "CodeBuild"
+      version         = "1"
       input_artifacts = ["SourceArtifact"]
       output_artifacts = ["BuildArtifact"]
+
       configuration = {
         ProjectName = aws_codebuild_project.my_project.name
       }
@@ -67,20 +75,23 @@ resource "aws_codepipeline" "my_pipeline2" {
   
   stage {
     name = "Deploy"
+
     action {
-      name = "DeployAction"
-      category = "Deploy"
-      owner = "AWS"
-      provider = "S3"
-      version = "1"
+      name            = "DeployAction"
+      category        = "Deploy"
+      owner           = "AWS"
+      provider        = "CodeDeploy"
+      version         = "1"
       input_artifacts = ["BuildArtifact"]
+
       configuration = {
-        BucketName = aws_s3_bucket.deploy_bucket.bucket
-        Extract = "true"
+        ApplicationName = aws_codedeploy_app.my_app.name
+        DeploymentGroupName = aws_codedeploy_deployment_group.my_deployment_group.name
       }
     }
   }
 }
+
 
 
 resource "aws_s3_bucket" "artifact_bucket" {
