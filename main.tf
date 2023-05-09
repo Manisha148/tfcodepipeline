@@ -24,8 +24,8 @@ resource "aws_codebuild_project" "my_project" {
   }
 }
 
-resource "aws_codepipeline" "my_pipeline" {
-  name = "my-pipeline"
+resource "aws_codepipeline" "my_pipeline2" {
+  name = "my-pipeline2"
   role_arn = "arn:aws:iam::124288123671:role/awsrolecodebuld"
   artifact_store {
     location = aws_s3_bucket.artifact_bucket.bucket
