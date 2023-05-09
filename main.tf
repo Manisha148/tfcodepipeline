@@ -24,7 +24,7 @@ resource "aws_codebuild_project" "my_project" {
   }
 }
 
-resource "aws_codepipeline" "my_pipeline" {
+resource "aws_codepipeline" "my_pipeline1" {
   name = "my-pipeline"
   role_arn = "arn:aws:iam::124288123671:role/awsrolecodebuld"
   artifact_store {
