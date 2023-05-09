@@ -6,14 +6,6 @@ resource "aws_s3_bucket" "source_bucket" {
   bucket = "my-source-bucket0098"
 }
 
-resource "aws_s3_bucket" "artifact_bucket" {
-  bucket = "my-artifact-bucket"
-}
-
-resource "aws_s3_bucket" "deploy_bucket" {
-  bucket = "my-deploy-bucket"
-}
-
 resource "aws_codebuild_project" "my_project" {
   name = "my-project"
   service_role = "arn:aws:iam::124288123671:role/awsrolecodebuld"
@@ -89,3 +81,12 @@ resource "aws_codepipeline" "my_pipeline" {
     }
   }
 }
+
+
+resource "aws_s3_bucket" "artifact_bucket" {
+  bucket = "my-artifact-bucket"
+}
+
+resource "aws_s3_bucket" "deploy_bucket" {
+  bucket = "my-deploy-bucket"
+}   
