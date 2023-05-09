@@ -59,7 +59,7 @@ resource "aws_codepipeline" "my_pipeline" {
       version = "1"
       input_artifacts = ["SourceArtifact"]
       output_artifacts = ["BuildArtifact"]
-      configuration {
+      configuration = {
         ProjectName = aws_codebuild_project.my_project.name
       }
     }
@@ -74,7 +74,7 @@ resource "aws_codepipeline" "my_pipeline" {
       provider = "S3"
       version = "1"
       input_artifacts = ["BuildArtifact"]
-      configuration {
+      configuration = {
         S3Bucket = aws_s3_bucket.deploy_bucket.bucket
         Extract = "true"
       }
