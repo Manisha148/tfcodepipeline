@@ -47,6 +47,7 @@ resource "aws_codepipeline" "my_pipeline" {
       }
     }
   }
+
   
   stage {
     name = "Build"
