@@ -80,6 +80,12 @@ resource "aws_codepipeline" "my_pipeline" {
     }
   }
 }
+resource "aws_codepipeline" "my_pipeline" {
+  name     = "my-pipeline"
+  role_arn = "${aws_iam_role.my_pipeline_role.arn}"
+
+  # ... other pipeline configurations ...
+}
 
 resource "aws_s3_bucket" "artifact_bucket" {
   bucket = "my-artifact-bucket"
