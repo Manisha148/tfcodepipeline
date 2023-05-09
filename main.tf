@@ -75,7 +75,7 @@ resource "aws_codepipeline" "my_pipeline" {
       version = "1"
       input_artifacts = ["BuildArtifact"]
       configuration = {
-        S3Bucket = aws_s3_bucket.deploy_bucket.bucket
+        BucketName = aws_s3_bucket.deploy_bucket.bucket
         Extract = "true"
       }
     }
@@ -85,8 +85,10 @@ resource "aws_codepipeline" "my_pipeline" {
 
 resource "aws_s3_bucket" "artifact_bucket" {
   bucket = "my-artifact-bucket"
+  region = "eu-west-2"
 }
 
 resource "aws_s3_bucket" "deploy_bucket" {
   bucket = "my-deploy-bucket"
+  region = "us-east-2"
 }
