@@ -1,63 +1,64 @@
-provider "aws" {
-  region = "us-west-2"
-}
-
-resource "aws_s3_bucket" "source_bucket" {
-  bucket = "my-source-bucket"
-}
-
 resource "aws_codebuild_project" "my_project" {
-  name = "my-project"
-  service_role = "arn:aws:iam::123456789012:role/service-role/codebuild-project-role"
+  name        = "my-project"
+  description = "My CodeBuild project"
+  
+  source {
+    type      = "S3"
+    location  = aws_s3_bucket.source_bucket.bucket
+    buildspec = file("${path.module}/buildspec.yml")
+  }
+  
+  environment {
+    type  = "LINUX_CONTAINER"
+    image = "aws/codebuild/standard:5.0"
+  }
+  
   artifacts {
     type = "S3"
-    location = aws_s3_bucket.source_bucket.bucket
-  }
-  source {
-    type = "S3"
-    location = aws_s3_bucket.source_bucket.bucket
-  }
-  environment {
-    type = "LINUX_CONTAINER"
-    compute_type = "BUILD_GENERAL1_SMALL"
-    image = "aws/codebuild/standard:4.0"
+    location = aws_s3_bucket.artifacts_bucket.bucket
+    name = "my-project"
   }
 }
 
 resource "aws_codepipeline" "my_pipeline" {
-  name = "my-pipeline"
-  role_arn = "arn:aws:iam::123456789012:role/pipeline-role"
+  name     = "my-pipeline"
+  role_arn = aws_iam_role.pipeline_role.arn
+  
   artifact_store {
-    location = aws_s3_bucket.artifact_bucket.bucket
-    type = "S3"
+    location = aws_s3_bucket.artifacts_bucket.bucket
+    type     = "S3"
   }
   
   stage {
     name = "Source"
+    
     action {
-      name = "SourceAction"
-      category = "Source"
-      owner = "AWS"
-      provider = "S3"
-      version = "1"
+      name            = "SourceAction"
+      category        = "Source"
+      owner           = "AWS"
+      provider        = "S3"
+      version         = "1"
       output_artifacts = ["SourceArtifact"]
+      
       configuration = {
-        S3Bucket = aws_s3_bucket.source_bucket.bucket
-        S3ObjectKey = "source.zip"
+        BucketName = aws_s3_bucket.source_bucket.bucket
+        ObjectKey  = "source.zip"
       }
     }
   }
   
   stage {
     name = "Build"
+    
     action {
-      name = "BuildAction"
-      category = "Build"
-      owner = "AWS"
-      provider = "CodeBuild"
-      version = "1"
+      name            = "BuildAction"
+      category        = "Build"
+      owner           = "AWS"
+      provider        = "CodeBuild"
+      version         = "1"
       input_artifacts = ["SourceArtifact"]
       output_artifacts = ["BuildArtifact"]
+      
       configuration = {
         ProjectName = aws_codebuild_project.my_project.name
       }
@@ -66,26 +67,52 @@ resource "aws_codepipeline" "my_pipeline" {
   
   stage {
     name = "Deploy"
+    
     action {
-      name = "DeployAction"
-      category = "Deploy"
-      owner = "AWS"
-      provider = "S3"
-      version = "1"
+      name            = "DeployAction"
+      category        = "Deploy"
+      owner           = "AWS"
+      provider        = "S3"
+      version         = "1"
       input_artifacts = ["BuildArtifact"]
+      
       configuration = {
-        S3Bucket = aws_s3_bucket.deploy_bucket.bucket
-        Extract = "true"
+        BucketName = aws_s3_bucket.deploy_bucket.bucket
       }
     }
   }
 }
 
+resource "aws_s3_bucket" "source_bucket" {
+  bucket = "my-source-bucket"
+}
 
-resource "aws_s3_bucket" "artifact_bucket" {
-  bucket = "my-artifact-bucket"
+resource "aws_s3_bucket" "artifacts_bucket" {
+  bucket = "my-artifacts-bucket"
 }
 
 resource "aws_s3_bucket" "deploy_bucket" {
   bucket = "my-deploy-bucket"
+}
+
+resource "aws_iam_role" "pipeline_role" {
+  name = "my-pipeline-role"
+  
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "codepipeline.amazonaws.com"
+        }
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "pipeline_policy_attachment" {
+  policy_arn = "arn:aws:iam::aws:policy/AWSCodePipelineFullAccess"
+  role       = aws_iam_role.pipeline_role.name
 }
