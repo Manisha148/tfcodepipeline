@@ -1,0 +1,22 @@
+version: 0.2
+
+phases:
+  install:
+    commands:
+      - npm install
+  build:
+    commands:
+      - npm run build
+artifacts:
+  files:
+    - app.js
+    - package.json
+    - public/
+    - views/
+  discard-paths: yes
+
+deploy:
+  provider: ElasticBeanstalk
+  artifact: my_build
+  app: my-app
+  env: my-env
