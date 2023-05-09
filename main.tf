@@ -1,14 +1,14 @@
 provider "aws" {
-  region = "us-east-1"
+  region = "us-west-2"
 }
 
 resource "aws_s3_bucket" "source_bucket" {
-  bucket = "my-source-bucket0098"
+  bucket = "my-source-bucket"
 }
 
 resource "aws_codebuild_project" "my_project" {
   name = "my-project"
-  service_role = "arn:aws:iam::124288123671:role/awsrolecodebuld"
+  service_role = "arn:aws:iam::123456789012:role/service-role/codebuild-project-role"
   artifacts {
     type = "S3"
     location = aws_s3_bucket.source_bucket.bucket
@@ -24,9 +24,9 @@ resource "aws_codebuild_project" "my_project" {
   }
 }
 
-resource "aws_codepipeline" "my_pipeline1" {
+resource "aws_codepipeline" "my_pipeline" {
   name = "my-pipeline"
-  role_arn = "arn:aws:iam::124288123671:role/awsrolecodebuld"
+  role_arn = "arn:aws:iam::123456789012:role/pipeline-role"
   artifact_store {
     location = aws_s3_bucket.artifact_bucket.bucket
     type = "S3"
@@ -47,7 +47,6 @@ resource "aws_codepipeline" "my_pipeline1" {
       }
     }
   }
-
   
   stage {
     name = "Build"
@@ -89,4 +88,4 @@ resource "aws_s3_bucket" "artifact_bucket" {
 
 resource "aws_s3_bucket" "deploy_bucket" {
   bucket = "my-deploy-bucket"
-}   
+}
