@@ -1,14 +1,14 @@
 provider "aws" {
-  region = "us-west-2"
+  region = "us-east-1"
 }
 
 resource "aws_s3_bucket" "source_bucket" {
-  bucket = "my-source-bucket"
+  bucket = "my-source-bucket0098"
 }
 
 resource "aws_codebuild_project" "my_project" {
   name = "my-project"
-  service_role = "arn:aws:iam::123456789012:role/service-role/codebuild-project-role"
+  service_role = "arn:aws:iam::124288123671:role/awsrolecodebuld"
   artifacts {
     type = "S3"
     location = aws_s3_bucket.source_bucket.bucket
@@ -19,9 +19,9 @@ resource "aws_codebuild_project" "my_project" {
   }
   environment {
     type = "LINUX_CONTAINER"
+    compute_type = "BUILD_GENERAL1_SMALL"
     image = "aws/codebuild/standard:4.0"
   }
-  buildspec = file("${path.module}/buildspec.yml")
 }
 
 resource "aws_codepipeline" "my_pipeline" {
