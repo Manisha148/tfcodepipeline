@@ -41,7 +41,7 @@ resource "aws_codepipeline" "my_pipeline" {
       provider = "S3"
       version = "1"
       output_artifacts = ["SourceArtifact"]
-      configuration {
+      configuration = {
         S3Bucket = aws_s3_bucket.source_bucket.bucket
         S3ObjectKey = "source.zip"
       }
