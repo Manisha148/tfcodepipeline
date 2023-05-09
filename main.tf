@@ -10,7 +10,21 @@ resource "aws_codebuild_project" "my_project" {
   
   environment {
     type  = "LINUX_CONTAINER"
+    
+    resource "aws_codebuild_project" "my_project" {
+    name          = "my-project"
+    service_role  = arn:aws:iam::124288123671:role/awsrolecodebuld
+    compute_type  = "BUILD_GENERAL1_SMALL" // or any other valid value
+    buildspec     = file("${path.module}/buildspec.yml")
     image = "aws/codebuild/standard:5.0"
+  # other configuration options for the project
+    source {
+    type            = "CODEPIPELINE"
+    buildspec       = file("${path.module}/buildspec.yml")
+    # other configuration options for the source
+  }
+}
+
   }
   
   artifacts {
