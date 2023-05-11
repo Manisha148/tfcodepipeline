@@ -8,8 +8,10 @@ resource "aws_s3_bucket" "source_bucket" {
 
 resource "aws_codebuild_project" "my_project" {
   name = "my-project"
+  service_role = "arn:aws:iam::124288123671:role/awsrolecodebuld"
+
   
-  service_role = arn:aws:iam::124288123671:role/awsrolecodebuld
+  
   
   artifacts {
     type = "CODEPIPELINE"
