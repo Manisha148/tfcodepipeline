@@ -1,112 +1,79 @@
 provider "aws" {
-  region = "us-east-1"
-}
-
-resource "aws_s3_bucket" "source_bucket" {
-  bucket = "my-source-bucket0098"
+  region = "us-west-2"
 }
 
 resource "aws_codebuild_project" "my_project" {
-  name = "my-project"
-  service_role = "arn:aws:iam::124288123671:role/awsrolecodebuld"
-
-  
-  
-  
-  artifacts {
-    type = "CODEPIPELINE"
-  }
-  
+  name          = "my-project"
+  service_role  = "arn:aws:iam::124288123671:role/awsrolecodebuild"
   source {
-    type = "S3"
-    location = aws_s3_bucket.source_bucket.bucket
+    type            = "CODEPIPELINE"
+    buildspec       = "buildspec.yml"
+    location        = "my-source-location"
+    git_clone_depth = 1
   }
-  
-  environment {
-    type = "LINUX_CONTAINER"
-    image = "aws/codebuild/standard:5.0"
-  }
-  
-  buildspec = file("${path.module}/buildspec.yml")
 }
-
 
 resource "aws_codepipeline" "my_pipeline" {
-  name = "my-pipeline"
-
-  # ...
-
-  role_arn = "arn:aws:iam::124288123671:role/awsrolecodebuld"
-}
-
+  name     = "my-pipeline"
+  role_arn = "arn:aws:iam::124288123671:role/awsrolecodepipeline"
 
   artifact_store {
-    location = aws_s3_bucket.artifact_bucket.bucket
+    location = "my-artifact-bucket"
     type     = "S3"
+    encryption_key {
+      id   = "my-kms-key"
+      type = "KMS"
+    }
   }
 
   stage {
     name = "Source"
-
     action {
-      name            = "SourceAction"
+      name            = "Source"
       category        = "Source"
-      owner           = "AWS"
-      provider        = "S3"
+      owner           = "ThirdParty"
+      provider        = "GitHub"
       version         = "1"
-      output_artifacts = ["SourceArtifact"]
-
-      configuration = {
-        BucketName = aws_s3_bucket.source_bucket.bucket
+      output_artifacts = ["source_output"]
+      configuration {
+        Owner          = "my-org"
+        Repo           = "my-repo"
+        Branch         = "main"
+        OAuthToken     = var.github_token
       }
     }
   }
 
   stage {
     name = "Build"
-
     action {
-      name            = "BuildAction"
+      name            = "Build"
       category        = "Build"
       owner           = "AWS"
       provider        = "CodeBuild"
+      input_artifacts = ["source_output"]
+      output_artifacts = ["build_output"]
       version         = "1"
-      input_artifacts = ["SourceArtifact"]
-      output_artifacts = ["BuildArtifact"]
-
-      configuration = {
+      configuration {
         ProjectName = aws_codebuild_project.my_project.name
       }
     }
   }
-  
+
   stage {
     name = "Deploy"
-
     action {
-      name            = "DeployAction"
+      name            = "Deploy"
       category        = "Deploy"
       owner           = "AWS"
-      provider        = "CodeDeploy"
+      provider        = "ECS"
+      input_artifacts = ["build_output"]
       version         = "1"
-      input_artifacts = ["BuildArtifact"]
-
-      configuration = {
-        ApplicationName = aws_codedeploy_app.my_app.name
-        DeploymentGroupName = aws_codedeploy_deployment_group.my_deployment_group.name
+      configuration {
+        ClusterName = "my-ecs-cluster"
+        ServiceName = "my-ecs-service"
+        FileName   = "imagedefinitions.json"
       }
     }
   }
-}
-
-
-
-resource "aws_s3_bucket" "artifact_bucket" {
-  bucket = "my-artifact-bucket"
-  region = "eu-west-2"
-}
-
-resource "aws_s3_bucket" "deploy_bucket" {
-  bucket = "my-deploy-bucket"
-  region = "us-east-2"
 }
